@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="js-external/marked.min.js"></script>
+    <script src="js-external/purify.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2ecc71">
+    <title>Plant Examiner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .language-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .language-selector select {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 25px;
+            border: none;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .camera-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .camera-button {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .camera-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.5);
+        }
+
+        .camera-button:active {
+            transform: translateY(0);
+        }
+
+        .camera-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .preview-section {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .preview-image {
+            max-width: 256px;
+            max-height: 256px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            margin-bottom: 15px;
+        }
+
+        .analyzing {
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin-top: 10px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .result {
+            padding: 15px;
+            background: #e8f8f5;
+            border-left: 4px solid #2ecc71;
+            border-radius: 5px;
+            margin-top: 10px;
+            text-align: left;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .error {
+            background: #ffeaa7;
+            border-left-color: #fdcb6e;
+        }
+
+        .history-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .history-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .history-item {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            border-bottom: 1px solid #ecf0f1;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: #f8f9fa;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .history-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .history-text {
+            font-size: 14px;
+            color: #2c3e50;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+        }
+
+        .export-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 500px;
+            margin: 50px auto;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #95a5a6;
+        }
+
+        .modal-close:hover {
+            color: #2c3e50;
+        }
+
+        .modal-image {
+            width: 100%;
+            max-width: 300px;
+            margin: 20px auto;
+            display: block;
+            border-radius: 10px;
+        }
+
+        .modal-result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌿 <span data-i18n="appTitle">Plant Examiner</span></h1>
+            <p data-i18n="appSubtitle">AI-powered plant disease detection</p>
+        </div>
+
+        <div class="language-selector">
+            <select id="languageSelect">
+                <option value="English">English</option>
+                <option value="Chinese">中文</option>
+                <option value="Hindi">हिन्दी</option>
+                <option value="Spanish">Español</option>
+                <option value="Arabic">العربية</option>
+                <option value="French">Français</option>
+                <option value="Bengali">বাংলা</option>
+                <option value="Portuguese">Português</option>
+                <option value="Russian">Русский</option>
+                <option value="Indonesian">Bahasa Indonesia</option>
+                <option value="Urdu">اردو</option>
+                <option value="German">Deutsch</option>
+                <option value="Japanese">日本語</option>
+                <option value="Nigerian Pidgin">Nigerian Pidgin</option>
+                <option value="Marathi">मराठी</option>
+                <option value="Vietnamese">Tiếng Việt</option>
+                <option value="Telugu">తెలుగు</option>
+                <option value="Hausa">Hausa</option>
+                <option value="Turkish">Türkçe</option>
+                <option value="Swahili">Kiswahili</option>
+                <option value="Tagalog">Tagalog</option>
+                <option value="Tamil">தமிழ்</option>
+                <option value="Korean">한국어</option>
+                <option value="Thai">ไทย</option>
+                <option value="Javanese">Basa Jawa</option>
+                <option value="Italian">Italiano</option>
+                <option value="Hebrew">עברית</option>
+            </select>
+        </div>
+
+        <div class="camera-section">
+            <input type="file" id="fileInput" accept="image/*" capture="environment">
+            <button class="camera-button" onclick="document.getElementById('fileInput').click()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <circle cx="12" cy="12" r="3"/>
+                    <circle cx="7" cy="8" r="1"/>
+                </svg>
+                <span data-i18n="takePhoto">Take Photo</span>
+            </button>
+            
+            <div class="preview-section" id="previewSection">
+                <img id="previewImage" class="preview-image" alt="Preview">
+                <div id="analyzing" class="analyzing" style="display:none;">
+                    <span data-i18n="analyzing">Analyzing plant...</span>
+                </div>
+                <div id="result" class="result" style="display:none;"></div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h2 class="history-title" data-i18n="history">History</h2>
+            <div id="historyList" class="empty-history">
+                <span data-i18n="noHistory">No analysis history yet</span>
+            </div>
+            <button class="export-button" onclick="exportHistory()" data-i18n="export">Export History</button>
+            <button class="export-button" onclick="clearHistory()" data-i18n="clearHistory">Clear History</button>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeDetailModal()">&times;</span>
+            <img id="modalImage" class="modal-image" alt="Plant">
+            <div id="modalDate" class="history-date"></div>
+            <div id="modalResult" class="modal-result"></div>
+        </div>
+    </div>
+
+    <script>
+        // i18n translations
+        const translations = {
+            'English': {
+                appTitle: 'Plant Examiner',
+                appSubtitle: 'AI-powered plant disease detection',
+                takePhoto: 'Take Photo',
+                analyzing: 'Analyzing plant...',
+                history: 'History',
+                noHistory: 'No analysis history yet',
+                export: 'Export History',
+                analysisError: 'Analysis failed',
+                clearHistory: 'Clear History'
+            },
+            'Chinese': {
+                appTitle: '植物检查器',
+                appSubtitle: 'AI驱动的植物病害检测',
+                takePhoto: '拍照',
+                analyzing: '分析植物中...',
+                history: '历史记录',
+                noHistory: '暂无分析历史',
+                export: '导出历史',
+                analysisError: '分析失败',
+                clearHistory: '清除历史记录'
+            },
+            'Hindi': {
+                appTitle: 'पादप परीक्षक',
+                appSubtitle: 'एआई-संचालित पादप रोग पहचान',
+                takePhoto: 'तस्वीर खींचो',
+                analyzing: 'पौधे का विश्लेषण हो रहा है...',
+                history: 'इतिहास',
+                noHistory: 'अभी तक कोई विश्लेषण इतिहास नहीं है',
+                export: 'इतिहास निर्यात करें',
+                analysisError: 'विश्लेषण विफल',
+                clearHistory: 'इतिहास साफ़ करें'
+            },
+            'Spanish': {
+                appTitle: 'Examinador de Plantas',
+                appSubtitle: 'Detección de enfermedades con IA',
+                takePhoto: 'Tomar Foto',
+                analyzing: 'Analizando planta...',
+                history: 'Historial',
+                noHistory: 'Sin historial de análisis',
+                export: 'Exportar Historial',
+                analysisError: 'Error en análisis',
+                clearHistory: 'Borrar historial'
+            },
+            'Arabic': {
+                appTitle: 'فاحص النباتات',
+                appSubtitle: 'الكشف عن أمراض النباتات باستخدام الذكاء الاصطناعي',
+                takePhoto: 'التقط صوره',
+                analyzing: 'جارٍ تحليل النبات...',
+                history: 'سجل',
+                noHistory: 'لا يوجد سجل تحليل حتى الآن',
+                export: 'تصدير السجل',
+                analysisError: 'فشل التحليل',
+                clearHistory: 'مسح السجل'
+            },
+            'French': {
+                appTitle: 'Examinateur de Plantes',
+                appSubtitle: 'Détection de maladies par IA',
+                takePhoto: 'Prendre Photo',
+                analyzing: 'Analyse en cours...',
+                history: 'Historique',
+                noHistory: 'Aucun historique',
+                export: 'Exporter Historique',
+                analysisError: 'Échec d\'analyse',
+                clearHistory: 'Effacer l\'historique'
+            },
+            'Bengali': {
+                appTitle: 'প্ল্যান্ট এক্সামিনার',
+                appSubtitle: 'এআই-চালিত উদ্ভিদ রোগ সনাক্তকরণ',
+                takePhoto: 'ছবি তুলুন',
+                analyzing: 'উদ্ভিদ বিশ্লেষণ করা হচ্ছে...',
+                history: 'ইতিহাস',
+                noHistory: 'এখনও কোন বিশ্লেষণ ইতিহাস নেই',
+                export: 'ইতিহাস এক্সপোর্ট করুন',
+                analysisError: 'বিশ্লেষণ ব্যর্থ হয়েছে',
+                clearHistory: 'ইতিহাস সাফ করুন'
+            },
+            'Portuguese': {
+                appTitle: 'Examinador de Plantas',
+                appSubtitle: 'Deteção de doenças de plantas com IA',
+                takePhoto: 'Tirar Foto',
+                analyzing: 'Analisando a planta...',
+                history: 'Histórico',
+                noHistory: 'Nenhum histórico de análise ainda',
+                export: 'Exportar Histórico',
+                analysisError: 'A análise falhou',
+                clearHistory: 'Limpar Histórico'
+            },
+            'Russian': {
+                appTitle: 'Эксперт по растениям',
+                appSubtitle: 'Обнаружение болезней растений с помощью ИИ',
+                takePhoto: 'Сделать фото',
+                analyzing: 'Анализ растения...',
+                history: 'История',
+                noHistory: 'Пока нет истории анализов',
+                export: 'Экспортировать историю',
+                analysisError: 'Ошибка анализа',
+                clearHistory: 'Очистить историю'
+            },
+            'Indonesian': {
+                appTitle: 'Pemeriksa Tanaman',
+                appSubtitle: 'Deteksi penyakit tanaman bertenaga AI',
+                takePhoto: 'Ambil Foto',
+                analyzing: 'Menganalisis tanaman...',
+                history: 'Riwayat',
+                noHistory: 'Belum ada riwayat analisis',
+                export: 'Ekspor Riwayat',
+                analysisError: 'Analisis gagal',
+                clearHistory: 'Hapus Riwayat'
+            },
+            'Urdu': {
+                appTitle: 'پلانٹ ایگزامینر',
+                appSubtitle: 'اے آئی سے چلنے والی پودوں کی بیماری کا پتہ لگانا',
+                takePhoto: 'تصویر لیں',
+                analyzing: 'پودے کا تجزیہ کیا جا رہا ہے...',
+                history: 'تاریخ',
+                noHistory: 'ابھی تک تجزیہ کی کوئی تاریخ نہیں ہے۔',
+                export: 'تاریخ برآمد کریں',
+                analysisError: 'تجزیہ ناکام',
+                clearHistory: 'تاریخ صاف کریں'
+            },
+            'German': {
+                appTitle: 'Pflanzenprüfer',
+                appSubtitle: 'KI-gestützte Pflanzenerkrankungserkennung',
+                takePhoto: 'Foto machen',
+                analyzing: 'Pflanze wird analysiert...',
+                history: 'Verlauf',
+                noHistory: 'Noch kein Analyseprotokoll',
+                export: 'Verlauf exportieren',
+                analysisError: 'Analyse fehlgeschlagen',
+                clearHistory: 'Verlauf löschen'
+            },
+            'Japanese': {
+                appTitle: '植物診断',
+                appSubtitle: 'AIによる植物の病気検出',
+                takePhoto: '写真を撮る',
+                analyzing: '植物を分析中...',
+                history: '履歴',
+                noHistory: '分析履歴はまだありません',
+                export: '履歴をエクスポート',
+                analysisError: '分析に失敗しました',
+                clearHistory: '履歴をクリア'
+            },
+            'Nigerian Pidgin': {
+                appTitle: 'Plant Examiner',
+                appSubtitle: 'AI-powered plant disease detection',
+                takePhoto: 'Take Photo',
+                analyzing: 'Dey analyze plant...',
+                history: 'History',
+                noHistory: 'No analysis history yet',
+                export: 'Export History',
+                analysisError: 'Analysis fail',
+                clearHistory: 'Clear History'
+            },
+            'Marathi': {
+                appTitle: 'वनस्पती तपासनीस',
+                appSubtitle: 'एआय-चालित वनस्पती रोग शोध',
+                takePhoto: 'फोटो काढा',
+                analyzing: 'वनस्पतीचे विश्लेषण करत आहे...',
+                history: 'इतिहास',
+                noHistory: 'अद्याप कोणताही विश्लेषण इतिहास नाही',
+                export: 'इतिहास निर्यात करा',
+                analysisError: 'विश्लेषण अयशस्वी',
+                clearHistory: 'इतिहास साफ करा'
+            },
+            'Vietnamese': {
+                appTitle: 'Giám địnhThực vật',
+                appSubtitle: 'Phát hiện bệnh cây trồng bằng AI',
+                takePhoto: 'Chụp ảnh',
+                analyzing: 'Đang phân tích cây...',
+                history: 'Lịch sử',
+                noHistory: 'Chưa có lịch sử phân tích',
+                export: 'Xuất lịch sử',
+                analysisError: 'Phân tích thất bại',
+                clearHistory: 'Xóa lịch sử'
+            },
+            'Telugu': {
+                appTitle: 'మొక్కల పరీक्षक',
+                appSubtitle: 'AI- శక్తితో పనిచేసే మొక్కల వ్యాధి నిర్ధారణ',
+                takePhoto: 'ఫోటో తీయండి',
+                analyzing: 'మొక్కను విశ్లేషిస్తోంది...',
+                history: 'చరిత్ర',
+                noHistory: 'ఇంకా విశ్లేషణ చరిత్ర లేదు',
+                export: 'చరిత్రను ఎగుమతి చేయండి',
+                analysisError: 'విశ్లేషణ విఫలమైంది',
+                clearHistory: 'చరిత్రను క్లియర్ చేయండి'
+            },
+            'Hausa': {
+                appTitle: 'Mai Binciken Shuka',
+                appSubtitle: 'Gano cutar shuka mai amfani da AI',
+                takePhoto: 'Dauki Hoto',
+                analyzing: 'Ana nazarin shuka...',
+                history: 'Tarihi',
+                noHistory: 'Babu tarihin bincike tukuna',
+                export: 'Tarihin Fitarwa',
+                analysisError: 'Bincike ya gaza',
+                clearHistory: 'Share Tarihi'
+            },
+            'Turkish': {
+                appTitle: 'Bitki İnceleyici',
+                appSubtitle: 'AI destekli bitki hastalığı tespiti',
+                takePhoto: 'Fotoğraf Çek',
+                analyzing: 'Bitki analiz ediliyor...',
+                history: 'Geçmiş',
+                noHistory: 'Henüz analiz geçmişi yok',
+                export: 'Geçmişi Dışa Aktar',
+                analysisError: 'Analiz başarısız',
+                clearHistory: 'Geçmişi Temizle'
+            },
+            'Swahili': {
+                appTitle: 'Mkaguzi wa Mimea',
+                appSubtitle: 'Utambuzi wa magonjwa ya mimea unaoendeshwa na AI',
+                takePhoto: 'Piga Picha',
+                analyzing: 'Inachambua mmea...',
+                history: 'Historia',
+                noHistory: 'Bado hakuna historia ya uchambuzi',
+                export: 'Historia ya Hamisha',
+                analysisError: 'Uchambuzi umeshindwa',
+                clearHistory: 'Futa Historia'
+            },
+            'Tagalog': {
+                appTitle: 'Tagasuri ng Halaman',
+                appSubtitle: 'Pagtukoy ng sakit sa halaman na pinapagana ng AI',
+                takePhoto: 'Kuhanan ng Larawan',
+                analyzing: 'Sinusuri ang halaman...',
+                history: 'Kasaysayan',
+                noHistory: 'Wala pang kasaysayan ng pagsusuri',
+                export: 'I-export ang Kasaysayan',
+                analysisError: 'Nabigo ang pagsusuri',
+                clearHistory: 'I-clear ang Kasaysayan'
+            },
+            'Tamil': {
+                appTitle: 'தாவர ஆய்வாளர்',
+                appSubtitle: 'AI-இயங்கும் தாவர நோய் கண்டறிதல்',
+                takePhoto: 'புகைப்படம் எடு',
+                analyzing: 'தாவரத்தை பகுப்பாய்வு செய்கிறது...',
+                history: 'வரலாறு',
+                noHistory: 'இன்னும் பகுப்பாய்வு வரலாறு இல்லை',
+                export: 'வரலாற்றை ஏற்றுமதி செய்',
+                analysisError: 'பகுப்பாய்வு தோல்வியடைந்தது',
+                clearHistory: 'வரலாற்றை அழி'
+            },
+            'Korean': {
+                appTitle: '식물 검사기',
+                appSubtitle: 'AI 기반 식물 질병 탐지',
+                takePhoto: '사진 촬영',
+                analyzing: '식물 분석 중...',
+                history: '기록',
+                noHistory: '분석 기록이 아직 없습니다',
+                export: '기록 내보내기',
+                analysisError: '분석 실패',
+                clearHistory: '기록 삭제'
+            },
+            'Thai': {
+                appTitle: 'เครื่องตรวจสอบพืช',
+                appSubtitle: 'การตรวจจับโรคพืชโดยใช้ AI',
+                takePhoto: 'ถ่ายภาพ',
+                analyzing: 'กำลังวิเคราะห์พืช...',
+                history: 'ประวัติ',
+                noHistory: 'ยังไม่มีประวัติการวิเคราะห์',
+                export: 'ส่งออกประวัติ',
+                analysisError: 'การวิเคราะห์ล้มเหลว',
+                clearHistory: 'ล้างประวัติ'
+            },
+            'Javanese': {
+                appTitle: 'Pemeriksa Tanduran',
+                appSubtitle: 'Deteksi penyakit tanduran kanthi tenaga AI',
+                takePhoto: 'Njupuk Foto',
+                analyzing: 'Nganalisa tanduran...',
+                history: 'Riwayat',
+                noHistory: 'Durung ana riwayat analisis',
+                export: 'Ekspor Riwayat',
+                analysisError: 'Analisis gagal',
+                clearHistory: 'Busak Riwayat'
+            },
+            'Italian': {
+                appTitle: 'Esaminatore di Piante',
+                appSubtitle: 'Rilevamento di malattie delle piante basato su IA',
+                takePhoto: 'Scatta Foto',
+                analyzing: 'Analisi della pianta in corso...',
+                history: 'Cronologia',
+                noHistory: 'Nessuna cronologia di analisi ancora',
+                export: 'Esporta Cronologia',
+                analysisError: 'Analisi fallita',
+                clearHistory: 'Cancella Cronologia'
+            },
+            'Hebrew': {
+                appTitle: 'בוחן צמחים',
+                appSubtitle: 'זיהוי מחלות צמחים מבוסס בינה מלאכותית',
+                takePhoto: 'צלם תמונה',
+                analyzing: 'מנתח צמח...',
+                history: 'היסטוריה',
+                noHistory: 'אין עדיין היסטוריית ניתוחים',
+                export: 'ייצוא היסטוריה',
+                analysisError: 'הניתוח נכשל',
+                clearHistory: 'נקה היסטוריה'
+            }
+        };
+
+        // Global variables
+        const apiBase = 'http://192.168.1.189:8000'; 
+        let currentLanguage = localStorage.getItem('language') || 'English';
+        let history = JSON.parse(localStorage.getItem('history') || '[]');
+
+        // Initialize app
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set language
+            document.getElementById('languageSelect').value = currentLanguage;
+            updateUI();
+            
+            // Check API health
+            checkAPIHealth();
+
+            // Load history
+            displayHistory();
+
+            // Setup file input handler
+            document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+            // Setup language change handler
+            document.getElementById('languageSelect').addEventListener('change', (e) => {
+                currentLanguage = e.target.value;
+                localStorage.setItem('language', currentLanguage);
+                updateUI();
+            });
+        });
+
+        function updateUI() {
+            const trans = translations[currentLanguage] || translations['English'];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (trans[key]) {
+                    el.textContent = trans[key];
+                }
+            });
+        }
+
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${apiBase}/health`);
+                if (!response.ok) {
+                    console.error('API health check failed - API may not be running');
+                }
+            } catch (error) {
+                console.error('API is not accessible:', error);
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                resizeAndAnalyzeImage(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resizeAndAnalyzeImage(dataUrl) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                let width = img.width;
+                let height = img.height;
+                const maxSize = 256;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height = (height * maxSize) / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width = (width * maxSize) / height;
+                        height = maxSize;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+                document.getElementById('previewImage').src = resizedDataUrl;
+                document.getElementById('previewSection').style.display = 'block';
+                document.getElementById('result').style.display = 'none';
+
+                analyzeImage(resizedDataUrl);
+            };
+            img.src = dataUrl;
+        }
+
+        async function analyzeImage(dataUrl) {
+            const trans = translations[currentLanguage] || translations['English'];
+            document.getElementById('analyzing').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+
+            try {
+                const base64Data = dataUrl.split(',')[1];
+                const response = await fetch(`${apiBase}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_base64: base64Data,
+                        language: currentLanguage
+                    })
+                });
+
+                const data = await response.json();
+                document.getElementById('analyzing').style.display = 'none';
+
+                if (data.success) {
+                    const resultDiv = document.getElementById('result');
+                    const html = DOMPurify.sanitize(marked.parse(data.result));
+                    resultDiv.innerHTML = html;
+                    resultDiv.className = 'result';
+                    resultDiv.style.display = 'block';
+
+                    const historyItem = {
+                        id: Date.now(),
+                        image: dataUrl,
+                        result: data.result,
+                        language: currentLanguage,
+                        date: new Date().toISOString()
+                    };
+                    history.unshift(historyItem);
+                    if (history.length > 50) history.pop();
+                    localStorage.setItem('history', JSON.stringify(history));
+                    displayHistory();
+                } else {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                console.error('Analysis failed:', error);
+                document.getElementById('analyzing').style.display = 'none';
+                const resultDiv = document.getElementById('result');
+                resultDiv.textContent = `${trans.analysisError}: ${error.message}`;
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+            }
+        }
+
+        function displayHistory() {
+            const historyList = document.getElementById('historyList');
+
+            if (history.length === 0) {
+                const trans = translations[currentLanguage] || translations['English'];
+                historyList.className = 'empty-history';
+                historyList.innerHTML = `<span>${trans.noHistory}</span>`;
+                return;
+            }
+
+            historyList.className = '';
+            historyList.innerHTML = history.map(item => {
+                const date = new Date(item.date);
+                const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                const firstLine = item.result.split('\n')[0].replace(/[*#]/g, '').trim();
+
+                return `
+                    <div class="history-item" onclick="showDetail(${item.id})">
+                        <img src="${item.image}" class="history-image" alt="Plant">
+                        <div class="history-content">
+                            <div class="history-date">${dateStr}</div>
+                            <div class="history-text">${firstLine}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showDetail(id) {
+            const item = history.find(h => h.id === id);
+            if (!item) return;
+
+            document.getElementById('modalImage').src = item.image;
+            document.getElementById('modalDate').textContent = new Date(item.date).toLocaleString();
+            document.getElementById('modalResult').textContent = item.result;
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+        function clearHistory() {
+            // 1) wipe the in-memory array
+            history = [];
+            // 2) remove from localStorage
+            localStorage.removeItem('history');
+            // 3) re-render the UI
+            displayHistory();
+        }
+
+        function exportHistory() {
+            const exportData = {
+                version: '1.0',
+                exportDate: new Date().toISOString(),
+                history: history
+            };
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `plant-examiner-history-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
