@@ -29,5 +29,17 @@ To install:
 
 To run the API:
 `./main.sh`
+
+## Code Overview
+
+`/notebooks` - notebooks used to generate fine tune text and fine tune the Gemma 3N model via unsloth
+`/js-external` - js files used by the webserver, see files for their licenses
+`index.html` - page for serving the web app used for this project
+`main.sh` - helper bash script for running API
+`plant_doctor_api.py` - API script
+`readme.md` - this file
+`requirements.txt` - pip requirements, may need adjusting for jetpack version
+
 To run the web server for traffic:
 `python3 -m http.server 8080`
+
